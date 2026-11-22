@@ -105,11 +105,15 @@ if grep -q '^COMPOSE_FILE=.*compose.funnel.yaml' .env; then
         printf '\n      \033[1;36m%s\033[0m\n\n' "$link"; note "(waiting for you…)";;
       esac
     done
-    if $DOCKER exec life-web-funnel tailscale funnel status 2>/dev/null | grep -q 'Funnel on'; then up=1; break; fi
+    # read the whole status first: "| grep -q" stops reading at the first match, which (with pipefail) counts as a failure
+    st=$($DOCKER exec life-web-funnel tailscale funnel status 2>/dev/null || true)
+    if [[ "$st" == *"Funnel on"* ]]; then up=1; break; fi
     sleep 2
   done
   [ "$up" = 1 ] || { say "Tailscale isn't on yet. Run this again when you've clicked the links."; exit 1; }
-  DNS=$($DOCKER exec life-web-funnel tailscale status --json 2>/dev/null | grep -o '"DNSName": *"[^"]*"' | head -1 | sed 's/.*"\([^"]*\)"$/\1/; s/\.$//')
+  js=$($DOCKER exec life-web-funnel tailscale status --json 2>/dev/null || true)
+  DNS=$(printf '%s\n' "$js" | grep -o '"DNSName": *"[^"]*"' | head -1 | sed 's/.*"\([^"]*\)"$/\1/; s/\.$//' || true)
+  [ -n "$DNS" ] || { say "Couldn't read the server's Tailscale address. Run this again in a minute."; exit 1; }
   ADDR="https://$DNS"
   if [ "$(getenv LIFEWEB_PUBLIC_URL)" != "$ADDR" ]; then setenv LIFEWEB_PUBLIC_URL "$ADDR"; $DOCKER compose up -d >/dev/null 2>&1; fi
   note "Public address: $ADDR"
