@@ -1,0 +1,5 @@
+.env
+data/
+funnel/
+CONNECT.txt
+node_modules/

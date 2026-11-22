@@ -1,0 +1,30 @@
+# The public address: a small Tailscale device of its own (named by LIFEWEB_HOSTNAME, e.g. lifewebservice) that puts Life Web Cloud on
+# the internet at https://<name>.<your-tailnet>.ts.net, port 443, with its own HTTPS certificate. Every device (computers, phones,
+# Claude's connector) uses that one address, at home or away; the access code guards it, and repeated wrong codes are locked out.
+# It has its own address, so port 443 on the server machine itself (and anything else there) is left alone.
+# Turned on by this line in .env (install.sh writes it):   COMPOSE_FILE=compose.yaml:compose.funnel.yaml
+# The first start prints a Tailscale sign-in link in its log (docker logs life-web-funnel), which install.sh shows; after you click
+# Connect it remembers (funnel/state). The server is reached by its service name, lifeweb-server.
+# To take it off the internet: docker compose stop life-web-funnel
+services:
+  life-web-funnel:
+    image: tailscale/tailscale:stable
+    container_name: life-web-funnel
+    hostname: ${LIFEWEB_HOSTNAME:-lifewebservice}
+    restart: unless-stopped
+    environment:
+      TS_NAME: ${LIFEWEB_HOSTNAME:-lifewebservice}
+      TS_TARGET: http://lifeweb-server:${PORT:-3095}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        tailscaled --tun=userspace-networking --statedir=/var/lib/tailscale &
+        sleep 3
+        tailscale up --hostname="$$TS_NAME"
+        until tailscale funnel --bg "$$TS_TARGET"; do sleep 5; done   # on a new account it waits for Funnel to be switched on
+        tailscale funnel status
+        wait
+    volumes:
+      - ./funnel/state:/var/lib/tailscale
+    depends_on:
+      - lifeweb-server

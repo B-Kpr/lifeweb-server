@@ -1,0 +1,19 @@
+# Life Web Cloud (Life Web 2, board format 2). From this folder:  docker compose up -d --build
+# Settings come from .env next to this file (copy .env.example). LIFEWEB_NAME there names the container, so
+# several servers (say, a test one) can run side by side in their own folders, each on its own PORT. The database and its daily backups are in ./data.
+services:
+  lifeweb-server:
+    build: .
+    image: ${LIFEWEB_NAME:-life-web}
+    container_name: ${LIFEWEB_NAME:-life-web}
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "${PORT:-3095}:${PORT:-3095}"
+    volumes:
+      - ./data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:${PORT:-3095}/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

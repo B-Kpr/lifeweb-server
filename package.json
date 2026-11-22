@@ -1,0 +1,9 @@
+{
+  "name": "life-web-server",
+  "version": "3.0.0",
+  "private": true,
+  "description": "Life Web Cloud: boards item by item in SQLite, people and invites, History and Chats, and the shared Assistant",
+  "main": "src/index.js",
+  "engines": { "node": ">=24" },
+  "scripts": { "start": "node src/index.js" }
+}
