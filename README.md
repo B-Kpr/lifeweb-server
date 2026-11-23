@@ -22,4 +22,4 @@ Both stay in `~/life-web/CONNECT.txt` on the server. Keep them private: they ope
 Run the same command again to update. Your settings, boards and Tailscale sign-in are kept. `LIFEWEB_PUBLIC=0` keeps the server on your own
 network only.
 
-Life Web Cloud 2.1.1.
+Life Web Cloud 2.1.2.

@@ -4,7 +4,7 @@
    guide.js. Each tool answers { result, step }: result goes back to the model, step is the one-line note the app shows. */
 'use strict';
 const M = require('./model');
-const { CHIP_KINDS, STATUSES, HUES, tagId, tagsOf, chipKind, isConceptKind, chipBody, nodeBody, N, C } = M;
+const { CHIP_KINDS, STATUSES, HUES, tagId, tagsOf, chipKind, isConceptKind, chipBody, nodeBody, N, C, notesChip } = M;
 
 class ToolError extends Error {}
 const NO_CONCEPT_CHIPS = 'A concept can\'t hold chips. Make a tile for this instead, and put them on the tile.';
@@ -213,6 +213,7 @@ function makeTools(ctx) {
           } else {
             const n = need(V, u.id), { patch, extra } = patchFrom(V, u, n); mine.push(...extra);
             if (isConceptKind(u.kind || n.kind) && Array.isArray(u.chips_add) && u.chips_add.length) throw new ToolError(NO_CONCEPT_CHIPS);
+            if (patch.kind === 'tile' && isConceptKind(n.kind) && !('notes' in patch)) mine.push(...notesChip(n, V.dockedOf(n.id)));   // a concept's notes become the tile's text chip
             if (!isConceptKind(patch.kind || n.kind)) mine.push(...tileTextChips(V, n.id, patch, false));
             mine.push(...stepChips(V, { chips: u.chips_add }, n.id, V.chipsOf(n.id).reduce((m, c) => Math.max(m, +c.order || 0), 0) + 10));
             for (const cu of Array.isArray(u.chips_update) ? u.chips_update : []) {

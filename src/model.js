@@ -36,8 +36,17 @@ const nodeBody = n => n.kind === 'chip' ? chipBody(n) : ({ kind: isConceptKind(n
   tags: tagsOf(n).slice(), ...(typeof n.hue === 'number' ? { hue: n.hue } : {}), ...(typeof n.hue === 'number' && n.shade ? { shade: Math.max(-100, Math.min(100, Math.round(n.shade))) } : {}),
   ...(typeof n.hue === 'number' && n.hueLock ? { hueLock: n.hueLock === 'one' ? 'one' : 'branch' } : {}), ...(n.mxOut ? { mxOut: true } : {}),
   ...(isConceptKind(n.kind) ? (+n.r > 0 ? { r: Math.round(Math.min(400, Math.max(28, +n.r))) } : {}) : { ...(+n.w > 0 ? { w: Math.round(Math.min(900, Math.max(120, +n.w))) } : {}), ...(+n.h > 0 ? { h: Math.round(Math.min(1400, Math.max(40, +n.h))) } : {}) }), ...times(n) });
-const N = (n, patch) => ({ coll: 'nodes', id: n.id, body: { ...nodeBody(n), ...(patch || {}) } });
+// a changed item; a change of kind builds the body again for the new kind (a tile has no notes field; its notes are a text chip)
+const N = (n, patch) => { const b = { ...nodeBody(n), ...(patch || {}) }; return { coll: 'nodes', id: n.id, body: patch && 'kind' in patch && b.kind !== n.kind ? nodeBody(b) : b }; };
 const C = (c, patch) => ({ coll: 'nodes', id: c.id, body: chipBody({ ...c, ...(patch || {}) }) });
+/* turning a concept into a tile: its notes become the tile's text chip (added to the text chip it already has, if it kept one while it
+   was a concept). docked: the chips docked in it. Returns the changes to make beside N(n, { kind: 'tile' }). */
+const notesChip = (n, docked) => {
+  const notes = String(n.notes || '').trim(); if (!isConceptKind(n.kind) || !notes) return [];
+  const t = docked.find(d => chipKind(d) === 'text');
+  if (!t) return [{ coll: 'nodes', id: uid('c'), body: chipBody({ chip: 'text', label: notes, parent: n.id, dock: true, order: Math.min(0, ...docked.map(d => +d.order || 0)) - 1 }) }];
+  return String(t.label || '').includes(notes) ? [] : [C(t, { label: t.label ? t.label + '\n\n' + notes : notes })];
+};
 
 /* what a client sends, checked before Life Web Cloud keeps it: the kinds this format knows, and none of the older format's fields.
    Fields it doesn't know are left alone, so a newer app of the same format can add some. Returns what's wrong, or ''. */
@@ -203,4 +212,4 @@ function autoPlace(V, p) {
 const rootSpot = V => { const roots = [...V.nodes.values()].filter(V.isRoot); return roots.length ? { x: Math.max(...roots.map(r => r.x)) + 700, y: roots[0].y } : { x: 0, y: 0 }; };
 
 module.exports = { FORMAT, COLLS, ROOT_R, SUB_R, TILE_W, HUES, TAG_HUES, CHIP_KINDS, STATUSES, uid, stable, tagId, tagsOf, chipKind, isConceptKind, times,
-  chipBody, nodeBody, N, C, checkItem, stampTimes, mergeBodies, diffBodies, onto, sideFields, makeView, viewOf, cascade, tagCleanup, autoPlace, rootSpot };
+  chipBody, nodeBody, N, C, notesChip, checkItem, stampTimes, mergeBodies, diffBodies, onto, sideFields, makeView, viewOf, cascade, tagCleanup, autoPlace, rootSpot };
