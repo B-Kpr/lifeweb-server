@@ -49,7 +49,7 @@ function outline(V, under) {
      place(V, parent)  where a new item under parent goes (default: model.autoPlace);  rootSpot(V)  where a new base item goes
      extraInfo(n)      more facts for get_items (the app adds the size it's drawn at)
      hooks             optional: createItem(V, parent) -> info, before a single item is made (may throw); createdItem(id, info);
-                       branchStart(), branchDone(); reparented(); linked(); depended()
+                       branchDone(); reparented(); linked(); depended()
      uid(prefix)       new ids (default: model.uid) */
 function makeTools(ctx) {
   const uid = ctx.uid || M.uid, hooks = ctx.hooks || {}, place = ctx.place || M.autoPlace, rootSpot = ctx.rootSpot || M.rootSpot;
@@ -164,15 +164,11 @@ function makeTools(ctx) {
       const V = ctx.view(), pid = String(a.parent == null ? '' : a.parent), parent = pid ? need(V, pid) : null;
       const roots = Array.isArray(a.items) ? a.items : []; if (!roots.length) throw new ToolError('Give at least one item.');
       const kindOf = it => isConceptKind(it.kind) ? 'concept' : 'tile', kidsIn = it => Array.isArray(it.children) ? it.children : [];
-      if (hooks.branchStart) hooks.branchStart();
-      // small models tend to send flat lists, so a flat list is refused with a reason they can act on
-      if (roots.length > 3) throw new ToolError('That is ' + roots.length + ' separate top items. Make one tile for the whole thing, group the rest into 3 to 7 tiles by topic or stage under it, and send it again. Nothing was added.');
+      // any shape is accepted (side by side, a tree, or both): how to group things is the model's judgement, guided by the guide, not refused here
       let count = 0;
       const check = (it, depth) => {
         if (!it || typeof it !== 'object') throw new ToolError('Every item must be an object with a label.');
         const under = kidsIn(it);
-        if (under.length > (depth === 0 ? 7 : 10)) throw new ToolError('"' + it.label + '" has ' + under.length + ' items directly under it. Group them into 3 to 7 tiles by topic or stage, and send it again. Nothing was added.');
-        if (depth === 0 && under.length > 4 && !under.some(k => kidsIn(k).length)) throw new ToolError('"' + it.label + '" is a flat list of ' + under.length + ' items. Group them into tiles by topic or stage, with the items under those, and send it again. Nothing was added.');
         if (++count > 300) throw new ToolError('That is more than 300 items. Send it in smaller branches.');
         if (depth > 8) throw new ToolError('That goes more than 8 levels deep. Flatten it.');
         if (kindOf(it) === 'concept' && ((Array.isArray(it.checklist) && it.checklist.length) || (Array.isArray(it.chips) && it.chips.length))) throw new ToolError(NO_CONCEPT_CHIPS);
